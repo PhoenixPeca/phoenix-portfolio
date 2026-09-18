@@ -53,10 +53,11 @@ function clientIp(request) {
 }
 
 function decodeExternalDestination(encodedDestination) {
-  if (!encodedDestination || !/^[A-Za-z0-9_-]+$/.test(encodedDestination)) return null;
+  const normalizedDestination = encodedDestination?.replace(/=+$/, "");
+  if (!normalizedDestination || !/^[A-Za-z0-9_-]+$/.test(normalizedDestination)) return null;
 
   try {
-    const target = new URL(Buffer.from(encodedDestination, "base64url").toString("utf8"));
+    const target = new URL(Buffer.from(normalizedDestination, "base64url").toString("utf8"));
     return target.protocol === "https:" ? target.href : null;
   } catch {
     return null;

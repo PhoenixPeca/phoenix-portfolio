@@ -32,10 +32,11 @@ const accessLogsSessionLifetime = 60 * 60 * 1000;
 const encoder = new TextEncoder();
 
 function decodeExternalDestination(encodedDestination) {
-  if (!encodedDestination || !/^[A-Za-z0-9_-]+$/.test(encodedDestination)) return null;
+  const normalizedDestination = encodedDestination?.replace(/=+$/, "");
+  if (!normalizedDestination || !/^[A-Za-z0-9_-]+$/.test(normalizedDestination)) return null;
 
   try {
-    const base64 = encodedDestination.replace(/-/g, "+").replace(/_/g, "/");
+    const base64 = normalizedDestination.replace(/-/g, "+").replace(/_/g, "/");
     const decoded = atob(base64.padEnd(Math.ceil(base64.length / 4) * 4, "="));
     const target = new URL(decoded);
     return target.protocol === "https:" ? target.href : null;
