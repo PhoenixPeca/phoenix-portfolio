@@ -1,0 +1,11 @@
+services:
+  portfolio:
+    build:
+      context: .
+    ports:
+      - "4173:4173"
+    environment:
+      PORT: "4173"
+    volumes:
+      - ./logs:/app/logs
+    restart: unless-stopped

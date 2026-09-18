@@ -15,6 +15,43 @@ const createDownloadedAtIndex = `
 
 let databaseReady;
 const gwaCertificationUrl = "https://drive.google.com/file/d/1480e45vMyRMuDOfHcEok43X-P21HcGBs/view?usp=sharing";
+const externalDestinations = {
+  "resume-link": "https://drive.google.com/file/d/1CO6aJz0FBqTlbBVSd61vT6Oe9bGjIcuk/view?usp=sharing",
+  "gwa-certification-link": gwaCertificationUrl,
+  "phoenix-aspacio-blog": "https://phoenix.aspac.io/",
+  "phoenix-aspacio-linkedin": "https://linkedin.com/in/phoenix-aspacio/",
+  "phoenix-aspacio-github": "https://github.com/PhoenixPeca",
+};
+const approvedExternalUrls = new Set([
+  ...Object.values(externalDestinations),
+  "https://wendyourway.com/",
+  "https://www.rakwireless.com/en-us",
+  "https://getmntd.com/",
+  "https://www.seaplanehk.com/",
+  "https://spud.edu.ph/",
+  "https://www.ingenuiti.com/",
+  "https://livehelp4us.com/",
+  "https://docs.rakwireless.com/",
+  "https://downloads.rakwireless.com/",
+  "https://print-docs.rakwireless.com/",
+  "https://news.rakwireless.com/",
+  "https://store.rakwireless.com/",
+  "https://learn.rakwireless.com/",
+].map((destination) => new URL(destination).href));
+const caseStudyRoutes = new Set(["/case-study/wend", "/case-study/rakwireless"]);
+
+function decodeApprovedDestination(encodedDestination) {
+  if (!encodedDestination || !/^[A-Za-z0-9_-]+$/.test(encodedDestination)) return null;
+
+  try {
+    const base64 = encodedDestination.replace(/-/g, "+").replace(/_/g, "/");
+    const decoded = atob(base64.padEnd(Math.ceil(base64.length / 4) * 4, "="));
+    const target = new URL(decoded);
+    return approvedExternalUrls.has(target.href) ? target.href : null;
+  } catch {
+    return null;
+  }
+}
 
 function ensureDatabase(env) {
   if (!databaseReady) {
@@ -45,21 +82,23 @@ export default {
   async fetch(request, env, ctx) {
     const url = new URL(request.url);
 
-    if (url.pathname === "/gwa-certification") {
-      ctx.waitUntil(logDocumentAccess(request, env, "gwa_certification"));
-      return Response.redirect(gwaCertificationUrl, 302);
+    if (url.pathname === "/external") {
+      const encodedDestination = url.searchParams.get("dest");
+      const destination = url.searchParams.get("destination");
+      const target = encodedDestination
+        ? decodeApprovedDestination(encodedDestination)
+        : (destination ? externalDestinations[destination] : null);
+
+      if (!target) {
+        return new Response("This external destination is not configured yet.", { status: 404 });
+      }
+
+      ctx.waitUntil(logDocumentAccess(request, env, `external:${encodedDestination ? `dest:${encodedDestination}` : destination}`));
+      return Response.redirect(target, 302);
     }
 
-    if (url.pathname === "/resume" || url.pathname === "/resume.pdf") {
-      const action = url.searchParams.get("download") === "1" ? "download" : "view";
-      ctx.waitUntil(logDocumentAccess(request, env, action));
-
-      const resumeUrl = new URL("/resume.pdf", request.url);
-      const response = await env.ASSETS.fetch(new Request(resumeUrl, request));
-      const headers = new Headers(response.headers);
-      headers.set("Content-Disposition", `${action === "download" ? "attachment" : "inline"}; filename="Phoenix-Eve-Aspacio-Resume.pdf"`);
-      headers.set("Cache-Control", "private, no-store");
-      return new Response(response.body, { status: response.status, headers });
+    if (caseStudyRoutes.has(url.pathname.replace(/\/$/, ""))) {
+      return env.ASSETS.fetch(new Request(new URL("/case-study.html", request.url), request));
     }
 
     if (url.pathname === "/") {
