@@ -8,6 +8,7 @@ services:
       - .env
     environment:
       PORT: "4173"
+    user: "${PUID:-0}:${PGID:-0}"
     volumes:
       - ./logs:/app/logs
     restart: unless-stopped
