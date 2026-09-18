@@ -117,7 +117,7 @@ function sourceFromRequest(url) {
 }
 
 function shouldLogExternalAccess(request) {
-  return !/bot/i.test(request.headers["user-agent"] || "");
+  return !/(bot|canva)/i.test(request.headers["user-agent"] || "");
 }
 
 async function latestAccessLogs() {

@@ -93,7 +93,7 @@ em { color:var(--blue); font-style:normal; }
 .contact em { color:var(--ink); font-weight:400; }
 .contact-floor { align-items:end; border-top:1px solid var(--ink); display:grid; gap:1.5rem; grid-template-columns:1fr auto; margin-top:clamp(5rem, 13vh, 11rem); padding-top:1rem; }
 .contact-email { font-size:clamp(1.35rem, 2.5vw, 2.5rem); font-weight:700; letter-spacing:-.06em; }
-.contact-email span { color:var(--blue); }
+.contact-email span { color:var(--blue); font-family:var(--mono); font-size:.65em; letter-spacing:0; }
 .contact-actions { align-items:end; display:flex; flex-direction:column; gap:1.25rem; }
 .resume-actions { display:flex; gap:.5rem; }
 .resume-button { border:1px solid var(--ink); font:500 .67rem var(--mono); padding:.7rem .8rem; text-transform:uppercase; transition:background .2s ease,color .2s ease; }
