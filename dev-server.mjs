@@ -1,37 +1,37 @@
 import { createServer } from "node:http";
-import { appendFile, mkdir, readFile, stat } from "node:fs/promises";
+import { createHmac, randomBytes, timingSafeEqual } from "node:crypto";
+import { appendFile, mkdir, readFile, stat, writeFile } from "node:fs/promises";
 import { extname, resolve, sep } from "node:path";
 import { fileURLToPath } from "node:url";
 
-const port = Number(process.env.PORT || 4173);
 const projectRoot = fileURLToPath(new URL(".", import.meta.url));
+
+async function loadLocalEnvironment() {
+  try {
+    const values = await readFile(resolve(projectRoot, ".env"), "utf8");
+    for (const line of values.split(/\r?\n/)) {
+      const separator = line.indexOf("=");
+      if (separator === -1 || line.trimStart().startsWith("#")) continue;
+      const key = line.slice(0, separator).trim();
+      const value = line.slice(separator + 1).trim().replace(/^(['\"])(.*)\1$/, "$2");
+      if (key && !process.env[key]) process.env[key] = value;
+    }
+  } catch (error) {
+    if (error.code !== "ENOENT") console.error("Could not load local environment", error);
+  }
+}
+
+await loadLocalEnvironment();
+
+const port = Number(process.env.PORT || 4173);
 const distDirectory = resolve(projectRoot, "dist");
 const logDirectory = resolve(projectRoot, "logs");
 const accessLogPath = resolve(logDirectory, "external-link-access.jsonl");
+const accessLogsPassword = process.env.ACCESS_LOGS_PASSWORD;
+const accessLogsSessionLifetime = 60 * 60 * 1000;
+const maximumAccessLogEntries = 100;
+let pendingAccessLogWrite = Promise.resolve();
 
-const destinations = {
-  "resume-link": "https://drive.google.com/file/d/1CO6aJz0FBqTlbBVSd61vT6Oe9bGjIcuk/view?usp=sharing",
-  "gwa-certification-link": "https://drive.google.com/file/d/1480e45vMyRMuDOfHcEok43X-P21HcGBs/view?usp=sharing",
-  "phoenix-aspacio-blog": "https://phoenix.aspac.io/",
-  "phoenix-aspacio-linkedin": "https://linkedin.com/in/phoenix-aspacio/",
-  "phoenix-aspacio-github": "https://github.com/PhoenixPeca",
-  "wend-philippines": "https://wendyourway.com/",
-  "rakwireless": "https://www.rakwireless.com/en-us",
-  "mntd": "https://getmntd.com/",
-  "seaplane": "https://www.seaplanehk.com/",
-  "spud": "https://spud.edu.ph/",
-  "ingenuiti": "https://www.ingenuiti.com/",
-  "livehelp4us": "https://livehelp4us.com/",
-};
-const caseStudyDestinations = [
-  "https://docs.rakwireless.com/",
-  "https://downloads.rakwireless.com/",
-  "https://print-docs.rakwireless.com/",
-  "https://news.rakwireless.com/",
-  "https://store.rakwireless.com/",
-  "https://learn.rakwireless.com/",
-];
-const approvedDestinations = new Set([...Object.values(destinations), ...caseStudyDestinations].map((destination) => new URL(destination).href));
 const caseStudyRoutes = new Set(["/case-study/wend", "/case-study/rakwireless"]);
 
 const contentTypes = {
@@ -43,31 +43,127 @@ const contentTypes = {
 };
 
 function clientIp(request) {
-  const forwarded = request.headers["x-forwarded-for"];
-  const address = Array.isArray(forwarded) ? forwarded[0] : forwarded;
-  return address?.split(",")[0].trim() || request.socket.remoteAddress || "unknown";
+  const cloudflare = request.headers["cf-connecting-ip"];
+  const forwardedFor = request.headers["x-forwarded-for"];
+  const forwarded = request.headers.forwarded;
+  const realIp = request.headers["x-real-ip"];
+  const first = (value) => (Array.isArray(value) ? value[0] : value)?.split(",")[0].trim();
+  const standardForwardedIp = first(forwarded)?.match(/(?:^|;)\s*for=(?:"?\[?)([^;\]",]+)/i)?.[1];
+  return first(cloudflare) || first(forwardedFor) || standardForwardedIp || first(realIp) || request.socket.remoteAddress || "unknown";
 }
 
-function decodeApprovedDestination(encodedDestination) {
+function decodeExternalDestination(encodedDestination) {
   if (!encodedDestination || !/^[A-Za-z0-9_-]+$/.test(encodedDestination)) return null;
 
   try {
     const target = new URL(Buffer.from(encodedDestination, "base64url").toString("utf8"));
-    return approvedDestinations.has(target.href) ? target.href : null;
+    return target.protocol === "https:" ? target.href : null;
   } catch {
     return null;
   }
 }
 
-async function logExternalAccess(request, destination) {
+function constantTimeEquals(left, right) {
+  const leftBuffer = Buffer.from(left);
+  const rightBuffer = Buffer.from(right);
+  return leftBuffer.length === rightBuffer.length && timingSafeEqual(leftBuffer, rightBuffer);
+}
+
+function accessLogsSignature(payload) {
+  return createHmac("sha256", accessLogsPassword).update(payload).digest("base64url");
+}
+
+function createAccessLogsSession() {
+  const expiresAt = Date.now() + accessLogsSessionLifetime;
+  const payload = `${expiresAt}.${randomBytes(18).toString("base64url")}`;
+  return `${payload}.${accessLogsSignature(payload)}`;
+}
+
+function accessLogsSessionIsValid(request) {
+  const session = request.headers.cookie?.match(/(?:^|;\s*)access_logs_session=([^;]+)/)?.[1];
+  if (!session || !accessLogsPassword) return false;
+  const separator = session.lastIndexOf(".");
+  if (separator === -1) return false;
+  const payload = session.slice(0, separator);
+  const expiresAt = Number(payload.slice(0, payload.indexOf(".")));
+  return Number.isFinite(expiresAt)
+    && expiresAt > Date.now()
+    && constantTimeEquals(session.slice(separator + 1), accessLogsSignature(payload));
+}
+
+function accessLogsCookie(request, value, maxAge) {
+  const secure = request.headers["x-forwarded-proto"] === "https" ? "; Secure" : "";
+  return `access_logs_session=${value}; HttpOnly; Path=/; Max-Age=${maxAge}; SameSite=Strict${secure}`;
+}
+
+async function requestJson(request) {
+  let body = "";
+  for await (const chunk of request) {
+    body += chunk;
+    if (body.length > 10_000) throw new Error("Request body is too large.");
+  }
+  return JSON.parse(body || "{}");
+}
+
+function destinationFromAction(action) {
+  const identifier = action?.replace(/^external:/, "");
+  if (!identifier) return "Unknown destination";
+  return identifier.startsWith("dest:") ? decodeExternalDestination(identifier.slice(5)) || identifier : identifier;
+}
+
+function sourceFromRequest(url) {
+  return url.searchParams.get("source")?.trim().slice(0, 100) || "unknown";
+}
+
+async function latestAccessLogs() {
+  try {
+    const contents = await readFile(accessLogPath, "utf8");
+    return contents
+      .trim()
+      .split("\n")
+      .filter(Boolean)
+      .slice(-maximumAccessLogEntries)
+      .reverse()
+      .flatMap((line) => {
+        try {
+          const record = JSON.parse(line);
+          return [{
+            timestamp: record.timestamp || "Unknown time",
+            accessed: destinationFromAction(record.action),
+            source: record.source || "unknown",
+            ipAddress: record.ipAddress || "unknown",
+            userAgent: record.userAgent || "unknown",
+          }];
+        } catch {
+          return [];
+        }
+      });
+  } catch (error) {
+    if (error.code === "ENOENT") return [];
+    throw error;
+  }
+}
+
+async function appendAndTrimAccessLog(record) {
   await mkdir(logDirectory, { recursive: true });
+  await appendFile(accessLogPath, `${JSON.stringify(record)}\n`, "utf8");
+  const records = (await readFile(accessLogPath, "utf8")).split("\n").filter(Boolean);
+  if (records.length > maximumAccessLogEntries) {
+    await writeFile(accessLogPath, `${records.slice(-maximumAccessLogEntries).join("\n")}\n`, "utf8");
+  }
+}
+
+function logExternalAccess(request, destination, source) {
   const record = {
     timestamp: new Date().toISOString(),
     action: `external:${destination}`,
+    source,
     ipAddress: clientIp(request),
     userAgent: request.headers["user-agent"] || "unknown",
   };
-  await appendFile(accessLogPath, `${JSON.stringify(record)}\n`, "utf8");
+  const write = pendingAccessLogWrite.catch(() => {}).then(() => appendAndTrimAccessLog(record));
+  pendingAccessLogWrite = write;
+  return write;
 }
 
 function staticFileFor(pathname) {
@@ -101,24 +197,23 @@ const server = createServer(async (request, response) => {
   const method = request.method || "GET";
   const url = new URL(request.url || "/", `http://${request.headers.host || "localhost"}`);
 
-  if (method !== "GET" && method !== "HEAD") {
+  const normalizedPathname = url.pathname.replace(/\/$/, "") || "/";
+  const isAccessLogsLogin = normalizedPathname === "/api/access-logs/session";
+  if (method !== "GET" && method !== "HEAD" && !(method === "POST" && isAccessLogsLogin)) {
     response.writeHead(405, { allow: "GET, HEAD" }).end("Method not allowed");
     return;
   }
 
   if (url.pathname === "/external") {
     const encodedDestination = url.searchParams.get("dest");
-    const destination = url.searchParams.get("destination");
-    const target = encodedDestination
-      ? decodeApprovedDestination(encodedDestination)
-      : (destination ? destinations[destination] : null);
+    const target = decodeExternalDestination(encodedDestination);
     if (!target) {
       response.writeHead(404).end("This external destination is not configured yet.");
       return;
     }
 
     try {
-      await logExternalAccess(request, encodedDestination ? `dest:${encodedDestination}` : destination);
+      await logExternalAccess(request, `dest:${encodedDestination}`, sourceFromRequest(url));
       response.writeHead(302, { location: target }).end();
     } catch (error) {
       console.error("Could not log external-link access", error);
@@ -127,7 +222,51 @@ const server = createServer(async (request, response) => {
     return;
   }
 
-  if (caseStudyRoutes.has(url.pathname.replace(/\/$/, ""))) {
+  if (isAccessLogsLogin) {
+    if (!accessLogsPassword) {
+      response.writeHead(503, { "content-type": "text/plain; charset=utf-8" }).end("Access-log protection is not configured.");
+      return;
+    }
+    try {
+      const { password } = await requestJson(request);
+      if (typeof password !== "string" || !constantTimeEquals(password, accessLogsPassword)) {
+        response.writeHead(401, { "content-type": "application/json; charset=utf-8" }).end(JSON.stringify({ error: "Incorrect password." }));
+        return;
+      }
+    } catch {
+      response.writeHead(400, { "content-type": "application/json; charset=utf-8" }).end(JSON.stringify({ error: "Invalid sign-in request." }));
+      return;
+    }
+    response.writeHead(204, { "set-cookie": accessLogsCookie(request, createAccessLogsSession(), accessLogsSessionLifetime / 1000) }).end();
+    return;
+  }
+
+  if (normalizedPathname === "/api/access-logs") {
+    if (!accessLogsPassword) {
+      response.writeHead(503, { "content-type": "application/json; charset=utf-8" }).end(JSON.stringify({ error: "Access-log protection is not configured." }));
+      return;
+    }
+    if (!accessLogsSessionIsValid(request)) {
+      response.writeHead(401, { "content-type": "application/json; charset=utf-8" }).end(JSON.stringify({ error: "Sign in required." }));
+      return;
+    }
+    const records = await latestAccessLogs();
+    const body = JSON.stringify(records);
+    response.writeHead(200, {
+      "cache-control": "no-store",
+      "content-type": "application/json; charset=utf-8",
+      "content-length": String(Buffer.byteLength(body)),
+    });
+    response.end(method === "HEAD" ? undefined : body);
+    return;
+  }
+
+  if (["/access-logs", "/access-logs.html"].includes(normalizedPathname)) {
+    await serveStaticFile(response, "/access-logs.html", method);
+    return;
+  }
+
+  if (caseStudyRoutes.has(normalizedPathname)) {
     await serveStaticFile(response, "/case-study.html", method);
     return;
   }

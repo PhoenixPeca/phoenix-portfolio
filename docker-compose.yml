@@ -4,6 +4,8 @@ services:
       context: .
     ports:
       - "4173:4173"
+    env_file:
+      - .env
     environment:
       PORT: "4173"
     volumes:

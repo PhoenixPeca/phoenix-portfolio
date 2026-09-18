@@ -1,0 +1,54 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <meta name="robots" content="noindex, nofollow, noarchive" />
+    <meta name="theme-color" content="#f4f3ef" />
+    <link rel="icon" type="image/png" href="/favicon-blue.png" />
+    <link rel="preconnect" href="https://fonts.googleapis.com" />
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+    <link href="https://fonts.googleapis.com/css2?family=DM+Mono:wght@400;500&family=Manrope:wght@400;500;600;700;800&display=swap" rel="stylesheet" />
+    <link rel="stylesheet" href="/styles.css" />
+    <script defer src="/access-logs.js"></script>
+    <title>Access Logs - Phoenix Eve Aspacio</title>
+  </head>
+  <body>
+    <main class="log-page">
+      <section class="log-login" id="access-login">
+        <a class="case-back" href="/">← Back to portfolio</a>
+        <p class="eyebrow">Private dashboard</p>
+        <h1>Access<br /><em>logs.</em></h1>
+        <p class="log-page-intro">Enter the dashboard password to view the latest 100 tracked external-link requests.</p>
+        <form class="log-login-form" id="access-login-form">
+          <label for="access-password">Password</label>
+          <div>
+            <input id="access-password" name="password" type="password" autocomplete="current-password" required />
+            <button type="submit">View logs <span aria-hidden="true">↗</span></button>
+          </div>
+          <p class="log-login-message" id="access-login-message" aria-live="polite"></p>
+        </form>
+      </section>
+
+      <section id="access-dashboard" hidden>
+        <a class="case-back" href="/">← Back to portfolio</a>
+        <p class="eyebrow">Private dashboard / latest 100 requests</p>
+        <h1>Recent access<br /><em>logs.</em></h1>
+        <div class="log-table-wrap" tabindex="0">
+          <table class="log-table">
+            <thead>
+              <tr>
+                <th scope="col">Time</th>
+                <th scope="col">Accessed</th>
+                <th scope="col">Source</th>
+                <th scope="col">IP address</th>
+                <th scope="col">User agent</th>
+              </tr>
+            </thead>
+            <tbody id="access-log-rows"></tbody>
+          </table>
+        </div>
+      </section>
+    </main>
+  </body>
+</html>

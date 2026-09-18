@@ -19,7 +19,6 @@ const caseStudies = {
         name: "RAKwireless Corporate Website",
         contribution: "Contributed Laravel and Tailwind development for the corporate web presence. Built into a custom GitOps-style delivery path: GitHub webhooks trigger an internal pipeline that builds and deploys containers, with Mattermost deployment-status notifications keeping stakeholders informed.",
         stack: ["Laravel", "Tailwind CSS", "GitHub Webhooks", "Containers", "Mattermost"],
-        url: "https://www.rakwireless.com/en-us",
         destination: "aHR0cHM6Ly93d3cucmFrd2lyZWxlc3MuY29tL2VuLXVz",
         image: "https://image.thum.io/get/width/1200/crop/800/noanimate/https://www.rakwireless.com/en-us",
       },
@@ -27,7 +26,6 @@ const caseStudies = {
         name: "RAKwireless Documentation Center",
         contribution: "Contributed development to the product documentation hub. Releases run through an internal GitLab CI/CD pipeline, building the documentation as a static site and publishing it to Amazon S3.",
         stack: ["Static Sites", "GitLab CI/CD", "GitLab Runners", "Amazon S3"],
-        url: "https://docs.rakwireless.com/",
         destination: "aHR0cHM6Ly9kb2NzLnJha3dpcmVsZXNzLmNvbS8",
         image: "https://image.thum.io/get/width/1200/crop/800/noanimate/https://docs.rakwireless.com/",
       },
@@ -35,7 +33,6 @@ const caseStudies = {
         name: "RAKwireless Downloads Center",
         contribution: "Developed a single-page Downloads Center integrated with Amazon S3. The technical team can manage releases through an S3-connected Nextcloud folder, making uploads and updates straightforward without changing the app.",
         stack: ["Single-page App", "Amazon S3", "Nextcloud", "File Operations"],
-        url: "https://downloads.rakwireless.com/",
         destination: "aHR0cHM6Ly9kb3dubG9hZHMucmFrd2lyZWxlc3MuY29tLw",
         image: "https://image.thum.io/get/width/1200/crop/800/noanimate/https://downloads.rakwireless.com/",
       },
@@ -43,7 +40,6 @@ const caseStudies = {
         name: "RAKwireless Print Docs",
         contribution: "Developed a Node.js application that periodically archives documentation pages as polished PDF editions. A custom renderer transforms Markdown templates into full PDF documents for offline and printable reference.",
         stack: ["Node.js", "Markdown", "Custom PDF Renderer", "Automation"],
-        url: "https://print-docs.rakwireless.com/",
         destination: "aHR0cHM6Ly9wcmludC1kb2NzLnJha3dpcmVsZXNzLmNvbS8",
         image: "https://image.thum.io/get/width/1200/crop/800/noanimate/https://print-docs.rakwireless.com/",
       },
@@ -51,7 +47,6 @@ const caseStudies = {
         name: "RAKwireless News Hub",
         contribution: "Contributed theme development for the RAKwireless News Hub, extending the Ghost publishing experience to support the brand's IoT, LoRaWAN, and Web3 editorial content.",
         stack: ["Ghost", "Theme Development", "Content Publishing"],
-        url: "https://news.rakwireless.com/",
         destination: "aHR0cHM6Ly9uZXdzLnJha3dpcmVsZXNzLmNvbS8",
         image: "https://image.thum.io/get/width/1200/crop/800/noanimate/https://news.rakwireless.com/",
       },
@@ -59,7 +54,6 @@ const caseStudies = {
         name: "RAKwireless Store",
         contribution: "Contributed Shopify theme development and custom integration tooling. The work includes Shopify Developer API and custom-app integrations that support a richer commerce workflow.",
         stack: ["Shopify", "Theme Development", "Shopify APIs", "Custom Apps"],
-        url: "https://store.rakwireless.com/",
         destination: "aHR0cHM6Ly9zdG9yZS5yYWt3aXJlbGVzcy5jb20v",
         image: "https://image.thum.io/get/width/1200/crop/800/noanimate/https://store.rakwireless.com/",
       },
@@ -67,7 +61,6 @@ const caseStudies = {
         name: "RAKwireless Learn",
         contribution: "Contributed theme development for the learning site inside Zendesk Support, alongside automations and triggers that help connect the support experience to the wider operational workflow.",
         stack: ["Zendesk", "Theme Development", "Automations", "Triggers"],
-        url: "https://learn.rakwireless.com/",
         destination: "aHR0cHM6Ly9sZWFybi5yYWt3aXJlbGVzcy5jb20v",
         image: "https://image.thum.io/get/width/1200/crop/800/noanimate/https://learn.rakwireless.com/",
       },
@@ -108,7 +101,7 @@ if (study.projects?.length) {
 
     const preview = document.createElement('a');
     preview.className = 'case-project-preview';
-    preview.href = `/external?dest=${project.destination}`;
+    preview.href = `/external?dest=${project.destination}&source=portfolio`;
     preview.target = '_blank';
     preview.rel = 'noreferrer';
     preview.setAttribute('aria-label', `Visit ${project.name}`);
@@ -137,7 +130,7 @@ if (study.projects?.length) {
     });
     const visit = document.createElement('a');
     visit.className = 'case-project-link';
-    visit.href = `/external?dest=${project.destination}`;
+    visit.href = `/external?dest=${project.destination}&source=portfolio`;
     visit.target = '_blank';
     visit.rel = 'noreferrer';
     visit.textContent = 'Visit live site ↗';
