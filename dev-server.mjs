@@ -116,6 +116,10 @@ function sourceFromRequest(url) {
   return url.searchParams.get("source")?.trim().slice(0, 100) || "unknown";
 }
 
+function shouldLogExternalAccess(request) {
+  return !/bot/i.test(request.headers["user-agent"] || "");
+}
+
 async function latestAccessLogs() {
   try {
     const contents = await readFile(accessLogPath, "utf8");
@@ -167,6 +171,17 @@ function logExternalAccess(request, destination, source) {
   return write;
 }
 
+function clearAccessLogs() {
+  const clear = pendingAccessLogWrite
+    .catch(() => {})
+    .then(async () => {
+      await mkdir(logDirectory, { recursive: true });
+      await writeFile(accessLogPath, "", "utf8");
+    });
+  pendingAccessLogWrite = clear;
+  return clear;
+}
+
 function staticFileFor(pathname) {
   const relativePath = pathname === "/" ? "index.html" : pathname.replace(/^\/+/, "");
   const filePath = resolve(distDirectory, relativePath);
@@ -200,8 +215,9 @@ const server = createServer(async (request, response) => {
 
   const normalizedPathname = url.pathname.replace(/\/$/, "") || "/";
   const isAccessLogsLogin = normalizedPathname === "/api/access-logs/session";
-  if (method !== "GET" && method !== "HEAD" && !(method === "POST" && isAccessLogsLogin)) {
-    response.writeHead(405, { allow: "GET, HEAD" }).end("Method not allowed");
+  const isAccessLogsClear = normalizedPathname === "/api/access-logs" && method === "DELETE";
+  if (method !== "GET" && method !== "HEAD" && !(method === "POST" && isAccessLogsLogin) && !isAccessLogsClear) {
+    response.writeHead(405, { allow: "DELETE, GET, HEAD, POST" }).end("Method not allowed");
     return;
   }
 
@@ -214,7 +230,9 @@ const server = createServer(async (request, response) => {
     }
 
     try {
-      await logExternalAccess(request, `dest:${encodedDestination}`, sourceFromRequest(url));
+      if (shouldLogExternalAccess(request)) {
+        await logExternalAccess(request, `dest:${encodedDestination}`, sourceFromRequest(url));
+      }
       response.writeHead(302, { location: target }).end();
     } catch (error) {
       console.error("Could not log external-link access", error);
@@ -249,6 +267,11 @@ const server = createServer(async (request, response) => {
     }
     if (!accessLogsSessionIsValid(request)) {
       response.writeHead(401, { "content-type": "application/json; charset=utf-8" }).end(JSON.stringify({ error: "Sign in required." }));
+      return;
+    }
+    if (method === "DELETE") {
+      await clearAccessLogs();
+      response.writeHead(204).end();
       return;
     }
     const records = await latestAccessLogs();

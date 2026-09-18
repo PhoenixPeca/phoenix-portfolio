@@ -156,6 +156,9 @@ em { color:var(--blue); font-style:normal; }
 .log-login-form button { background:var(--blue); border:1px solid var(--blue); color:white; cursor:pointer; font:500 .67rem var(--mono); padding:.85rem 1rem; text-transform:uppercase; white-space:nowrap; }
 .log-login-form button:disabled { cursor:wait; opacity:.65; }
 .log-login-message { color:var(--blue); font:.7rem var(--mono); margin:1rem 0 0; min-height:1rem; }
+.clear-logs-button { background:transparent; border:1px solid var(--ink); color:var(--ink); cursor:pointer; font:500 .67rem var(--mono); margin-top:2rem; padding:.7rem .85rem; text-transform:uppercase; }
+.clear-logs-button:hover, .clear-logs-button:focus-visible { background:var(--ink); color:white; }
+.clear-logs-button:disabled { cursor:wait; opacity:.65; }
 .log-table-wrap { border:1px solid var(--ink); margin-top:clamp(3rem, 7vw, 6rem); overflow:auto; }
 .log-table { border-collapse:collapse; min-width:1000px; text-align:left; width:100%; }
 .log-table th { background:var(--ink); color:white; font:500 .65rem var(--mono); letter-spacing:.06em; padding:1rem; text-transform:uppercase; }

@@ -3,6 +3,7 @@ const login = document.querySelector("#access-login");
 const loginForm = document.querySelector("#access-login-form");
 const loginMessage = document.querySelector("#access-login-message");
 const dashboard = document.querySelector("#access-dashboard");
+const clearLogsButton = document.querySelector("#clear-access-logs");
 
 function addCell(row, value) {
   const cell = document.createElement("td");
@@ -77,6 +78,23 @@ loginForm.addEventListener("submit", async (event) => {
     loginMessage.textContent = error.message || "Could not sign in.";
   } finally {
     submit.disabled = false;
+  }
+});
+
+clearLogsButton.addEventListener("click", async () => {
+  if (!window.confirm("Clear all access logs? This cannot be undone.")) return;
+  clearLogsButton.disabled = true;
+  try {
+    const response = await fetch("/api/access-logs", {
+      credentials: "same-origin",
+      method: "DELETE",
+    });
+    if (!response.ok) throw new Error("Could not clear access logs.");
+    await loadAccessLogs();
+  } catch (error) {
+    window.alert(error.message || "Could not clear access logs.");
+  } finally {
+    clearLogsButton.disabled = false;
   }
 });
 

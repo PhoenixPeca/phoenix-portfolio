@@ -96,6 +96,10 @@ function sourceFromUrl(url) {
   return url.searchParams.get("source")?.trim().slice(0, 100) || "unknown";
 }
 
+function shouldLogExternalAccess(request) {
+  return !/bot/i.test(request.headers.get("User-Agent") || "");
+}
+
 async function latestAccessLogs(env) {
   await ensureDatabase(env);
   const result = await env.DB.prepare(
@@ -184,6 +188,14 @@ export default {
       if (!await accessLogsSessionIsValid(request, env.ACCESS_LOGS_PASSWORD)) {
         return Response.json({ error: "Sign in required." }, { status: 401 });
       }
+      if (request.method === "DELETE") {
+        await ensureDatabase(env);
+        await env.DB.prepare("DELETE FROM resume_downloads").run();
+        return new Response(null, { status: 204 });
+      }
+      if (request.method !== "GET" && request.method !== "HEAD") {
+        return new Response("Method not allowed", { status: 405, headers: { Allow: "DELETE, GET, HEAD" } });
+      }
       return Response.json(await latestAccessLogs(env), { headers: { "Cache-Control": "no-store" } });
     }
     if (["/access-logs", "/access-logs.html"].includes(normalizedPathname)) {
@@ -198,7 +210,9 @@ export default {
         return new Response("This external destination is not configured yet.", { status: 404 });
       }
 
-      ctx.waitUntil(logDocumentAccess(request, env, `external:dest:${encodedDestination}`, sourceFromUrl(url)));
+      if (shouldLogExternalAccess(request)) {
+        ctx.waitUntil(logDocumentAccess(request, env, `external:dest:${encodedDestination}`, sourceFromUrl(url)));
+      }
       return Response.redirect(target, 302);
     }
 
