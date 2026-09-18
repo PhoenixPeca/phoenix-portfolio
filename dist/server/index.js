@@ -62,6 +62,10 @@ export default {
       return new Response(response.body, { status: response.status, headers });
     }
 
+    if (url.pathname === "/") {
+      return env.ASSETS.fetch(new Request(new URL("/index.html", request.url), request));
+    }
+
     return env.ASSETS.fetch(request);
   },
 };
