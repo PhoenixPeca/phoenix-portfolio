@@ -14,6 +14,7 @@ const createDownloadedAtIndex = `
 `;
 
 let databaseReady;
+const gwaCertificationUrl = "https://drive.google.com/file/d/1480e45vMyRMuDOfHcEok43X-P21HcGBs/view?usp=sharing";
 
 function ensureDatabase(env) {
   if (!databaseReady) {
@@ -28,7 +29,7 @@ function ensureDatabase(env) {
   return databaseReady;
 }
 
-async function logResumeAccess(request, env, action) {
+async function logDocumentAccess(request, env, action) {
   const ipAddress = request.headers.get("CF-Connecting-IP") || null;
   const userAgent = (request.headers.get("User-Agent") || "unavailable").slice(0, 512);
 
@@ -44,9 +45,14 @@ export default {
   async fetch(request, env, ctx) {
     const url = new URL(request.url);
 
+    if (url.pathname === "/gwa-certification") {
+      ctx.waitUntil(logDocumentAccess(request, env, "gwa_certification"));
+      return Response.redirect(gwaCertificationUrl, 302);
+    }
+
     if (url.pathname === "/resume" || url.pathname === "/resume.pdf") {
       const action = url.searchParams.get("download") === "1" ? "download" : "view";
-      ctx.waitUntil(logResumeAccess(request, env, action));
+      ctx.waitUntil(logDocumentAccess(request, env, action));
 
       const resumeUrl = new URL("/resume.pdf", request.url);
       const response = await env.ASSETS.fetch(new Request(resumeUrl, request));

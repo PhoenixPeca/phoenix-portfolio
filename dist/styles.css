@@ -56,6 +56,9 @@ em { color:var(--blue); font-style:normal; }
 .credential-number { color:var(--blue); font-size:clamp(3.5rem, 8vw, 8rem); font-weight:800; letter-spacing:-.1em; line-height:.8; margin:0; }
 .credential-copy { font-size:clamp(1rem, 1.5vw, 1.3rem); font-weight:600; line-height:1.35; margin:2rem 0 0; }
 .credential-copy span { color:var(--muted); font-weight:400; }
+.credential-link { display:inline-block; font:500 .7rem var(--mono); margin-top:1.5rem; text-transform:uppercase; }
+.credential-link span { color:var(--blue); font-size:1rem; }
+.credential-link:hover { color:var(--blue); }
 .contact { background:var(--lime); min-height:90vh; padding-bottom:2rem; padding-top:clamp(4rem, 10vw, 9rem); }
 .contact h2 { max-width:1200px; }
 .contact em { color:var(--ink); font-weight:400; }
