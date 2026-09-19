@@ -31,7 +31,7 @@ em { color:var(--blue); font-style:normal; }
 .rotating-word { display:inline-block; font-family:var(--mono); font-size:1.1em; letter-spacing:-.075em; line-height:1; vertical-align:baseline; }
 .rotating-word::after { animation:caret-blink .9s step-end infinite; background:currentColor; content:""; display:inline-block; height:.82em; margin-left:.08em; vertical-align:-.1em; width:.055em; }
 .hero-floor { align-items:end; border-top:1px solid var(--ink); display:grid; gap:2rem; grid-template-columns:1.3fr 1fr auto; margin-top:auto; padding:1.1rem 0 1.4rem; }
-.hero-summary { font-size:clamp(1rem, 1.4vw, 1.3rem); font-weight:500; line-height:1.35; margin:0; max-width:28rem; }
+.hero-summary { font-size:clamp(1rem, 1.4vw, 1.3rem); font-weight:500; line-height:1.35; margin:0; max-width:34rem; }
 .hero-role { color:var(--blue); font-weight:700; }
 .text-link { font:500 .75rem var(--mono); text-transform:uppercase; }
 .text-link span { color:var(--blue); font-size:1.3rem; margin-left:.25rem; }
