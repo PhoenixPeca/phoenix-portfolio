@@ -5,7 +5,7 @@ const caseStudies = {
     intro: "Leading the delivery of practical digital systems for patient information and insurance-provider workflows.",
     description: "Responsive applications, cloud deployments, and operational tooling designed to keep critical healthcare-adjacent workflows moving.",
     highlights: ["Shapes full-stack application delivery and technical direction.", "Connects responsive product experiences with dependable deployment workflows.", "Improves the operational details behind high-stakes information flows."],
-    technologies: ["Laravel", "FlightPHP", "Svelte", "React", "jQuery", "AWS", "Docker", "Proxmox"], screenshots: [],
+    technologies: ["Laravel", "Flight PHP", "Svelte", "React", "jQuery", "AWS", "Docker", "Proxmox"], screenshots: [],
   },
   rakwireless: {
     company: "RAKwireless Technology Ltd.", period: "2018 - 2023", role: "Web Development, DevOps, and IT Leadership",
@@ -13,7 +13,7 @@ const caseStudies = {
     intro: "Progressed from rebuilding the public web presence to leading cross-functional IT delivery.",
     description: "A connected portfolio of public web, commerce, documentation, downloads, publishing, and learning platforms—each with delivery automation designed for dependable releases.",
     highlights: ["Contributed development across RAKwireless's main public web, commerce, documentation, download, news, and learning platforms.", "Built and supported automated delivery paths, from container-based GitOps deployments to static-site publishing on S3.", "Connected product experiences with practical operational workflows, release visibility, and stakeholder notifications."],
-    technologies: ["Laravel", "React", "Node.js", "FlightPHP", "Shopify Development", "AWS Serverless", "DevSecOps", "Ansible", "Proxmox", "FinOps", "Odoo"], screenshots: [],
+    technologies: ["Laravel", "React", "Node.js", "Flight PHP", "Shopify Development", "AWS Serverless", "DevSecOps", "Ansible", "Proxmox", "FinOps", "Odoo"], screenshots: [],
     projects: [
       {
         name: "RAKwireless Corporate Website",
