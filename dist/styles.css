@@ -124,6 +124,7 @@ em { color:var(--blue); font-style:normal; }
 .case-section-heading { margin-bottom:clamp(3rem, 6vw, 5rem); }
 .case-section-heading .eyebrow { color:var(--lime); }
 .case-gallery { display:grid; gap:1rem; grid-template-columns:repeat(2, minmax(0, 1fr)); }
+.case-gallery-single { grid-template-columns:repeat(2, minmax(0, 1fr)); }
 .case-gallery figure { margin:0; }
 .case-gallery img { display:block; height:auto; width:100%; }
 .case-gallery figcaption { color:#c8c8c3; font:.68rem var(--mono); margin-top:.7rem; }
@@ -133,6 +134,15 @@ em { color:var(--blue); font-style:normal; }
 .case-project-preview img { aspect-ratio:3 / 2; object-fit:cover; transition:transform .35s ease,opacity .35s ease; }
 .case-project-preview:hover img, .case-project-preview:focus-visible img { opacity:.8; transform:scale(1.035); }
 .case-project-preview:focus-visible { outline:2px solid var(--lime); outline-offset:-2px; }
+.case-project-carousel { background:#0d0d0d; overflow:hidden; position:relative; }
+.case-project-carousel-track { display:flex; transition:transform .55s cubic-bezier(.2,.75,.2,1); }
+.case-project-carousel figure { flex:0 0 100%; }
+.case-project-carousel img { aspect-ratio:4 / 3; object-fit:cover; }
+.case-project-carousel figcaption { padding:.6rem .85rem .75rem; }
+.case-project-carousel-controls { align-items:center; bottom:.75rem; display:flex; gap:.4rem; position:absolute; right:.75rem; }
+.case-project-carousel-button { align-items:center; background:rgba(13,13,13,.84); border:1px solid #8b8b86; color:#f8f8f5; cursor:pointer; display:flex; font:1rem/1 var(--mono); height:2rem; justify-content:center; padding:0; width:2rem; }
+.case-project-carousel-button:hover, .case-project-carousel-button:focus-visible { background:var(--lime); border-color:var(--lime); color:#151515; outline:0; }
+.case-project-carousel-status { background:rgba(13,13,13,.84); border:1px solid #5a5a58; color:#f8f8f5; font:.58rem var(--mono); margin:0; padding:.62rem .55rem; }
 .case-project-details { display:flex; flex:1; flex-direction:column; padding:1.35rem; }
 .case-project-number { color:var(--lime); font:.62rem var(--mono); letter-spacing:.08em; margin:0; }
 .case-project-details h3 { font-size:clamp(1.25rem, 2.2vw, 2rem); letter-spacing:-.055em; line-height:1.03; margin:1.1rem 0 0; }
