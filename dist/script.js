@@ -48,6 +48,37 @@ if (menuToggle && primaryNav) {
   });
 }
 
+const personalProjectGrid = document.querySelector('#personal-project-grid');
+const personalProjectToggle = document.querySelector('.personal-project-toggle');
+
+if (personalProjectGrid && personalProjectToggle) {
+  const defaultProjectCount = 4;
+  const projectCards = Array.from(personalProjectGrid.querySelectorAll('.personal-project-card'));
+
+  projectCards
+    .sort((first, second) => Number(second.dataset.projectYear) - Number(first.dataset.projectYear))
+    .forEach((card) => personalProjectGrid.append(card));
+
+  const hiddenProjectCount = Math.max(0, projectCards.length - defaultProjectCount);
+  const updateProjectVisibility = (expanded) => {
+    projectCards.forEach((card, index) => {
+      card.hidden = !expanded && index >= defaultProjectCount;
+    });
+    personalProjectToggle.setAttribute('aria-expanded', String(expanded));
+    personalProjectToggle.textContent = expanded
+      ? 'Show fewer projects'
+      : `Show ${hiddenProjectCount} more projects`;
+  };
+
+  if (hiddenProjectCount > 0) {
+    personalProjectToggle.hidden = false;
+    updateProjectVisibility(false);
+    personalProjectToggle.addEventListener('click', () => {
+      updateProjectVisibility(personalProjectToggle.getAttribute('aria-expanded') !== 'true');
+    });
+  }
+}
+
 const dot = document.querySelector('.cursor-dot');
 if (dot && window.matchMedia('(pointer:fine)').matches) {
   window.addEventListener('pointermove', (event) => {
