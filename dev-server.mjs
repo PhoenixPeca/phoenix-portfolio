@@ -157,7 +157,9 @@ async function countryForIp(ipAddress) {
   })();
 
   countryLookupCache.set(ipAddress, lookup);
-  return lookup;
+  const country = await lookup;
+  if (!country) countryLookupCache.delete(ipAddress);
+  return country;
 }
 
 async function readAccessLogRecords() {
