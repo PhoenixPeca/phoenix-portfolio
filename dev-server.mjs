@@ -31,6 +31,7 @@ const accessLogsPassword = process.env.ACCESS_LOGS_PASSWORD;
 const accessLogsSessionLifetime = 60 * 60 * 1000;
 const maximumAccessLogEntries = 100;
 let pendingAccessLogWrite = Promise.resolve();
+const countryLookupCache = new Map();
 
 const caseStudyRoutes = new Set(["/case-study/wend", "/case-study/rakwireless"]);
 
@@ -122,25 +123,51 @@ function shouldLogExternalAccess(request) {
   return !/(bot|canva|bytespider)/i.test(request.headers["user-agent"] || "");
 }
 
-async function latestAccessLogs() {
+function canLookUpCountry(ipAddress) {
+  if (!ipAddress || ipAddress === "unknown") return false;
+  const normalized = ipAddress.replace(/^::ffff:/i, "");
+  return normalized !== "::1"
+    && normalized !== "127.0.0.1"
+    && !/^10\./.test(normalized)
+    && !/^192\.168\./.test(normalized)
+    && !/^172\.(1[6-9]|2\d|3[01])\./.test(normalized);
+}
+
+async function countryForIp(ipAddress) {
+  if (!canLookUpCountry(ipAddress)) return null;
+  if (countryLookupCache.has(ipAddress)) return countryLookupCache.get(ipAddress);
+
+  const lookup = (async () => {
+    try {
+      const response = await fetch(`https://ipwho.is/${encodeURIComponent(ipAddress)}`, {
+        signal: AbortSignal.timeout(2_500),
+      });
+      if (!response.ok) return null;
+      const result = await response.json();
+      const countryCode = typeof result.country_code === "string" ? result.country_code.toUpperCase() : "";
+      if (!result.success || !/^[A-Z]{2}$/.test(countryCode)) return null;
+      return {
+        countryCode,
+        countryName: typeof result.country === "string" ? result.country.slice(0, 100) : countryCode,
+        internetProvider: typeof result.connection?.isp === "string" ? result.connection.isp.slice(0, 150) : "Unknown provider",
+      };
+    } catch {
+      return null;
+    }
+  })();
+
+  countryLookupCache.set(ipAddress, lookup);
+  return lookup;
+}
+
+async function readAccessLogRecords() {
   try {
-    const contents = await readFile(accessLogPath, "utf8");
-    return contents
-      .trim()
+    return (await readFile(accessLogPath, "utf8"))
       .split("\n")
       .filter(Boolean)
-      .slice(-maximumAccessLogEntries)
-      .reverse()
       .flatMap((line) => {
         try {
-          const record = JSON.parse(line);
-          return [{
-            timestamp: record.timestamp || "Unknown time",
-            accessed: destinationFromAction(record.action),
-            source: record.source || "unknown",
-            ipAddress: record.ipAddress || "unknown",
-            userAgent: record.userAgent || "unknown",
-          }];
+          return [JSON.parse(line)];
         } catch {
           return [];
         }
@@ -149,6 +176,39 @@ async function latestAccessLogs() {
     if (error.code === "ENOENT") return [];
     throw error;
   }
+}
+
+async function enrichAccessLogCountries(records) {
+  const enriched = await Promise.all(records.map(async (record) => {
+    if ((record.countryCode && record.internetProvider) || !canLookUpCountry(record.ipAddress)) return record;
+    const country = await countryForIp(record.ipAddress);
+    return country ? { ...record, ...country } : record;
+  }));
+  return enriched;
+}
+
+async function latestAccessLogs() {
+  const read = pendingAccessLogWrite.catch(() => {}).then(async () => {
+    const records = await readAccessLogRecords();
+    const enriched = await enrichAccessLogCountries(records);
+    if (JSON.stringify(enriched) !== JSON.stringify(records)) {
+      await mkdir(logDirectory, { recursive: true });
+      await writeFile(accessLogPath, `${enriched.map((record) => JSON.stringify(record)).join("\n")}\n`, "utf8");
+    }
+    return enriched;
+  });
+  pendingAccessLogWrite = read;
+  const records = await read;
+  return records.slice(-maximumAccessLogEntries).reverse().map((record) => ({
+    timestamp: record.timestamp || "Unknown time",
+    accessed: destinationFromAction(record.action),
+    source: record.source || "unknown",
+    ipAddress: record.ipAddress || "unknown",
+    countryCode: record.countryCode || null,
+    countryName: record.countryName || null,
+    internetProvider: record.internetProvider || null,
+    userAgent: record.userAgent || "unknown",
+  }));
 }
 
 async function appendAndTrimAccessLog(record) {

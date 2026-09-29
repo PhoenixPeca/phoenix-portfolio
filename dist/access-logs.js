@@ -16,6 +16,30 @@ function formatTime(timestamp) {
   return Number.isNaN(date.getTime()) ? timestamp : date.toLocaleString();
 }
 
+function addIpCell(row, record) {
+  const cell = document.createElement("td");
+  cell.className = "ip-address-cell";
+  const locationDetails = [record.countryName, record.internetProvider].filter(Boolean).join(" — ");
+  if (locationDetails) cell.title = locationDetails;
+  const countryCode = typeof record.countryCode === "string" && /^[A-Z]{2}$/.test(record.countryCode)
+    ? record.countryCode.toLowerCase()
+    : null;
+
+  if (countryCode) {
+    const flag = document.createElement("img");
+    flag.className = "country-flag";
+    flag.src = `https://cdn.ipwhois.io/flags/${countryCode}.svg`;
+    flag.alt = record.countryName ? `${record.countryName} flag` : `${record.countryCode} flag`;
+    flag.addEventListener("error", () => flag.remove(), { once: true });
+    cell.append(flag);
+  }
+
+  const address = document.createElement("span");
+  address.textContent = record.ipAddress;
+  cell.append(address);
+  row.append(cell);
+}
+
 async function loadAccessLogs() {
   try {
     const response = await fetch("/api/access-logs", { cache: "no-store", credentials: "same-origin" });
@@ -37,7 +61,7 @@ async function loadAccessLogs() {
       addCell(row, formatTime(record.timestamp));
       addCell(row, record.accessed);
       addCell(row, record.source);
-      addCell(row, record.ipAddress);
+      addIpCell(row, record);
       addCell(row, record.userAgent);
       logRows.append(row);
     }
