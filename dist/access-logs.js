@@ -16,6 +16,33 @@ function formatTime(timestamp) {
   return Number.isNaN(date.getTime()) ? timestamp : date.toLocaleString();
 }
 
+function addDeleteCell(row, record) {
+  const cell = document.createElement("td");
+  const button = document.createElement("button");
+  button.type = "button";
+  button.className = "delete-log-button";
+  button.textContent = "Delete";
+  button.setAttribute("aria-label", `Delete access log from ${formatTime(record.timestamp)} for ${record.ipAddress}`);
+  button.addEventListener("click", async () => {
+    if (!window.confirm("Delete this access log entry? This cannot be undone.")) return;
+    button.disabled = true;
+    try {
+      const response = await fetch(`/api/access-logs?id=${encodeURIComponent(record.id)}`, {
+        credentials: "same-origin",
+        method: "DELETE",
+      });
+      if (!response.ok) throw new Error("Could not delete access log entry.");
+      await loadAccessLogs();
+    } catch (error) {
+      window.alert(error.message || "Could not delete access log entry.");
+    } finally {
+      button.disabled = false;
+    }
+  });
+  cell.append(button);
+  row.append(cell);
+}
+
 function addIpCell(row, record) {
   const cell = document.createElement("td");
   cell.className = "ip-address-cell";
@@ -51,7 +78,7 @@ async function loadAccessLogs() {
     if (!records.length) {
       const row = document.createElement("tr");
       addCell(row, "No tracked external-link requests yet.");
-      row.firstChild.colSpan = 5;
+      row.firstChild.colSpan = 6;
       logRows.append(row);
       return true;
     }
@@ -63,6 +90,7 @@ async function loadAccessLogs() {
       addCell(row, record.source);
       addIpCell(row, record);
       addCell(row, record.userAgent);
+      addDeleteCell(row, record);
       logRows.append(row);
     }
     return true;
@@ -70,7 +98,7 @@ async function loadAccessLogs() {
     logRows.replaceChildren();
     const row = document.createElement("tr");
     addCell(row, error.message || "Could not load access logs.");
-    row.firstChild.colSpan = 5;
+    row.firstChild.colSpan = 6;
     logRows.append(row);
     return false;
   }

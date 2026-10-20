@@ -97,15 +97,16 @@ function sourceFromUrl(url) {
 }
 
 function shouldLogExternalAccess(request) {
-  return !/(bot|canva|bytespider)/i.test(request.headers.get("User-Agent") || "");
+  return !/(bot|canva|bytespider|crawler)/i.test(request.headers.get("User-Agent") || "");
 }
 
 async function latestAccessLogs(env) {
   await ensureDatabase(env);
   const result = await env.DB.prepare(
-    "SELECT downloaded_at, action, source, ip_address, user_agent FROM resume_downloads ORDER BY downloaded_at DESC, id DESC LIMIT 100",
+    "SELECT id, downloaded_at, action, source, ip_address, user_agent FROM resume_downloads ORDER BY downloaded_at DESC, id DESC LIMIT 100",
   ).all();
   return result.results.map((record) => ({
+    id: record.id,
     timestamp: record.downloaded_at,
     accessed: destinationFromAction(record.action),
     source: record.source || "unknown",
@@ -189,8 +190,16 @@ export default {
         return Response.json({ error: "Sign in required." }, { status: 401 });
       }
       if (request.method === "DELETE") {
+        const id = url.searchParams.get("id");
+        if (id !== null && !/^[1-9]\d*$/.test(id)) {
+          return Response.json({ error: "Invalid log entry ID." }, { status: 400 });
+        }
         await ensureDatabase(env);
-        await env.DB.prepare("DELETE FROM resume_downloads").run();
+        if (id === null) {
+          await env.DB.prepare("DELETE FROM resume_downloads").run();
+        } else {
+          await env.DB.prepare("DELETE FROM resume_downloads WHERE id = ?").bind(id).run();
+        }
         return new Response(null, { status: 204 });
       }
       if (request.method !== "GET" && request.method !== "HEAD") {

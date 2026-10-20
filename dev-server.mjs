@@ -1,5 +1,5 @@
 import { createServer } from "node:http";
-import { createHmac, randomBytes, timingSafeEqual } from "node:crypto";
+import { createHmac, randomBytes, randomUUID, timingSafeEqual } from "node:crypto";
 import { appendFile, mkdir, readFile, stat, writeFile } from "node:fs/promises";
 import { extname, resolve, sep } from "node:path";
 import { fileURLToPath } from "node:url";
@@ -120,7 +120,7 @@ function sourceFromRequest(url) {
 }
 
 function shouldLogExternalAccess(request) {
-  return !/(bot|canva|bytespider)/i.test(request.headers["user-agent"] || "");
+  return !/(bot|canva|bytespider|crawler)/i.test(request.headers["user-agent"] || "");
 }
 
 function canLookUpCountry(ipAddress) {
@@ -191,9 +191,10 @@ async function enrichAccessLogCountries(records) {
 
 async function latestAccessLogs() {
   const read = pendingAccessLogWrite.catch(() => {}).then(async () => {
-    const records = await readAccessLogRecords();
+    const originalRecords = await readAccessLogRecords();
+    const records = originalRecords.map((record) => record.id ? record : { ...record, id: randomUUID() });
     const enriched = await enrichAccessLogCountries(records);
-    if (JSON.stringify(enriched) !== JSON.stringify(records)) {
+    if (JSON.stringify(enriched) !== JSON.stringify(originalRecords)) {
       await mkdir(logDirectory, { recursive: true });
       await writeFile(accessLogPath, `${enriched.map((record) => JSON.stringify(record)).join("\n")}\n`, "utf8");
     }
@@ -202,6 +203,7 @@ async function latestAccessLogs() {
   pendingAccessLogWrite = read;
   const records = await read;
   return records.slice(-maximumAccessLogEntries).reverse().map((record) => ({
+    id: record.id,
     timestamp: record.timestamp || "Unknown time",
     accessed: destinationFromAction(record.action),
     source: record.source || "unknown",
@@ -224,6 +226,7 @@ async function appendAndTrimAccessLog(record) {
 
 function logExternalAccess(request, destination, source) {
   const record = {
+    id: randomUUID(),
     timestamp: new Date().toISOString(),
     action: `external:${destination}`,
     source,
@@ -235,12 +238,13 @@ function logExternalAccess(request, destination, source) {
   return write;
 }
 
-function clearAccessLogs() {
+function clearAccessLogs(id = null) {
   const clear = pendingAccessLogWrite
     .catch(() => {})
     .then(async () => {
       await mkdir(logDirectory, { recursive: true });
-      await writeFile(accessLogPath, "", "utf8");
+      const records = id === null ? [] : (await readAccessLogRecords()).filter((record) => record.id !== id);
+      await writeFile(accessLogPath, records.map((record) => JSON.stringify(record) + "\n").join(""), "utf8");
     });
   pendingAccessLogWrite = clear;
   return clear;
@@ -334,7 +338,12 @@ const server = createServer(async (request, response) => {
       return;
     }
     if (method === "DELETE") {
-      await clearAccessLogs();
+      const id = url.searchParams.get("id");
+      if (id !== null && !/^[a-zA-Z0-9-]{1,100}$/.test(id)) {
+        response.writeHead(400).end("Invalid log entry ID.");
+        return;
+      }
+      await clearAccessLogs(id);
       response.writeHead(204).end();
       return;
     }
