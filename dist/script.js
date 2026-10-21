@@ -2,7 +2,7 @@ const year = document.querySelector('#year');
 if (year) year.textContent = new Date().getFullYear();
 
 const rotatingWord = document.querySelector('#rotating-word');
-const rotationWords = ['reliable', 'scalable', 'beautiful', 'automated', 'invisible'];
+const rotationWords = ['reliable', 'scalable', 'beautiful', 'automated', 'invisible', 'AI-Ready'];
 
 if (rotatingWord && !window.matchMedia('(prefers-reduced-motion: reduce)').matches) {
   let wordIndex = 0;
