@@ -97,7 +97,7 @@ function sourceFromUrl(url) {
 }
 
 function shouldLogExternalAccess(request) {
-  return !/(bot|canva|bytespider|crawler)/i.test(request.headers.get("User-Agent") || "");
+  return !/(bot|canva|spider|crawler)/i.test(request.headers.get("User-Agent") || "");
 }
 
 async function latestAccessLogs(env) {

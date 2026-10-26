@@ -120,7 +120,7 @@ function sourceFromRequest(url) {
 }
 
 function shouldLogExternalAccess(request) {
-  return !/(bot|canva|bytespider|crawler)/i.test(request.headers["user-agent"] || "");
+  return !/(bot|canva|spider|crawler)/i.test(request.headers["user-agent"] || "");
 }
 
 function canLookUpCountry(ipAddress) {
